@@ -3,15 +3,15 @@
 # Ask Doubt on telegram @KingVJ01
 
 import re
+import os
+import json
+import base64
+import asyncio
 from pyrogram import filters, Client, enums
 from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, UsernameInvalid, UsernameNotModified
 from config import ADMINS, LOG_CHANNEL, PUBLIC_FILE_STORE, WEBSITE_URL, WEBSITE_URL_MODE, MONITOR_CHANNEL, REPORT_CHANNEL
 from plugins.users_api import get_user, get_short_link
 from TechVJ.utils.human_readable import humanbytes
-import re
-import os
-import json
-import base64
 
 # Don't Remove Credit Tg - @VJ_Botz
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
@@ -23,6 +23,21 @@ async def allowed(_, __, message):
     if message.from_user and message.from_user.id in ADMINS:
         return True
     return False
+
+async def generate_thumbnail(bot, message, duration):
+    try:
+        # Generate thumbnail from middle of video
+        time = duration // 2 if duration > 2 else 0
+        thumbnail_path = f"{message.id}_thumb.jpg"
+        await bot.download_media(
+            message=message,
+            file_name=thumbnail_path,
+            in_memory=False
+        )
+        return thumbnail_path
+    except Exception as e:
+        print(f"Error generating thumbnail: {e}")
+        return None
 
 # Channel Monitor Handler
 @Client.on_message(filters.chat(MONITOR_CHANNEL) & (filters.document | filters.video | filters.audio))
@@ -51,20 +66,29 @@ async def channel_store(bot, message):
         # Extract thumbnail for video files
         if message.video:
             try:
-                # Try to get video thumbnail
-                thumbnail = await message.video.download_thumb()
-                # Send thumbnail with file details to report channel
-                await bot.send_photo(
-                    REPORT_CHANNEL,
-                    photo=thumbnail,
-                    caption=f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
-                )
-                # Clean up thumbnail file
-                if os.path.exists(thumbnail):
-                    os.remove(thumbnail)
+                # Generate thumbnail from video
+                thumbnail = await generate_thumbnail(bot, message, duration)
+                
+                if thumbnail and os.path.exists(thumbnail):
+                    # Send thumbnail with file details
+                    await bot.send_photo(
+                        REPORT_CHANNEL,
+                        photo=thumbnail,
+                        caption=f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
+                    )
+                    # Clean up
+                    try:
+                        os.remove(thumbnail)
+                    except:
+                        pass
+                else:
+                    # Fallback to sending without thumbnail
+                    await bot.send_message(
+                        REPORT_CHANNEL,
+                        f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
+                    )
             except Exception as e:
-                print(f"Error handling thumbnail: {e}")
-                # Fallback to sending without thumbnail
+                print(f"Error handling video thumbnail: {e}")
                 await bot.send_message(
                     REPORT_CHANNEL,
                     f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
