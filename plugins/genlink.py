@@ -24,21 +24,6 @@ async def allowed(_, __, message):
         return True
     return False
 
-async def generate_thumbnail(bot, message, duration):
-    try:
-        # Generate thumbnail from middle of video
-        time = duration // 2 if duration > 2 else 0
-        thumbnail_path = f"{message.id}_thumb.jpg"
-        await bot.download_media(
-            message=message,
-            file_name=thumbnail_path,
-            in_memory=False
-        )
-        return thumbnail_path
-    except Exception as e:
-        print(f"Error generating thumbnail: {e}")
-        return None
-
 # Channel Monitor Handler
 @Client.on_message(filters.chat(MONITOR_CHANNEL) & (filters.document | filters.video | filters.audio))
 async def channel_store(bot, message):
@@ -61,40 +46,38 @@ async def channel_store(bot, message):
         media = getattr(message, message.media.value)
         file_name = getattr(media, "file_name", "No name")
         file_size = humanbytes(getattr(media, "file_size", 0))
-        duration = getattr(media, "duration", 0)
         
-        # Extract thumbnail for video files
-        if message.video:
+        # Handle video files with thumbnails
+        if message.video and hasattr(message.video, "thumbs") and len(message.video.thumbs) > 0:
             try:
-                # Generate thumbnail from video
-                thumbnail = await generate_thumbnail(bot, message, duration)
+                # Extract thumbnail
+                thumbs = message.video.thumbs[0]
+                file_id = thumbs.file_id
+                thumbnail = await bot.download_media(file_id)
                 
-                if thumbnail and os.path.exists(thumbnail):
-                    # Send thumbnail with file details
-                    await bot.send_photo(
-                        REPORT_CHANNEL,
-                        photo=thumbnail,
-                        caption=f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
-                    )
-                    # Clean up
-                    try:
-                        os.remove(thumbnail)
-                    except:
-                        pass
-                else:
-                    # Fallback to sending without thumbnail
-                    await bot.send_message(
-                        REPORT_CHANNEL,
-                        f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
-                    )
+                # Get duration for videos
+                duration = getattr(message.video, "duration", 0)
+                
+                # Send with thumbnail
+                await bot.send_photo(
+                    REPORT_CHANNEL,
+                    photo=thumbnail,
+                    caption=f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
+                )
+                
+                # Clean up thumbnail
+                if os.path.exists(thumbnail):
+                    os.remove(thumbnail)
+                    
             except Exception as e:
-                print(f"Error handling video thumbnail: {e}")
+                print(f"Error handling thumbnail: {e}")
+                # Fallback to sending without thumbnail
                 await bot.send_message(
                     REPORT_CHANNEL,
-                    f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
+                    f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n\n<b>📎 Link:</b> {share_link}"
                 )
         else:
-            # For non-video files, send without thumbnail
+            # For non-video files or videos without thumbnails
             await bot.send_message(
                 REPORT_CHANNEL,
                 f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n\n<b>📎 Link:</b> {share_link}"

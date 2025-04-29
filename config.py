@@ -47,8 +47,8 @@ AUTO_DELETE_TIME = int(environ.get("AUTO_DELETE_TIME", "1800")) # Time in Second
 
 # Channel Information
 LOG_CHANNEL = int(environ.get("LOG_CHANNEL", "-1002381714495"))
-MONITOR_CHANNEL = int(environ.get("MONITOR_CHANNEL", "")) # Channel ID to monitor for files
-REPORT_CHANNEL = int(environ.get("REPORT_CHANNEL", "")) # Channel to send generated links
+MONITOR_CHANNEL = int(environ.get("MONITOR_CHANNEL", "-1002019927887")) # Channel ID to monitor for files
+REPORT_CHANNEL = int(environ.get("REPORT_CHANNEL", "-1002134664548")) # Channel to send generated links
 
 # File Caption Information
 CUSTOM_FILE_CAPTION = environ.get("CUSTOM_FILE_CAPTION", f"{script.CAPTION}")
