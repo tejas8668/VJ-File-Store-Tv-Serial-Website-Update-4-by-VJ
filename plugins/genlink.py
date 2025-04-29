@@ -62,7 +62,15 @@ async def channel_store(bot, message):
                 await bot.send_photo(
                     REPORT_CHANNEL,
                     photo=thumbnail,
-                    caption=f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
+                    #caption=f"<b>New File Stored ✅</b>\n\n<b>📁 File Name:</b> {file_name}\n<b>📦 File Size:</b> {file_size}\n<b>⌛ Duration:</b> {duration} seconds\n\n<b>📎 Link:</b> {share_link}"
+                    caption = (
+                        f"<pre>{{\n"
+                        f'  "file_name": "{file_name}",\n'
+                        f'  "file_size": "{file_size}",\n'
+                        f'  "duration": {duration},\n'
+                        f'  "share_link": "{share_link}"\n'
+                        f"}}<pre>"
+                    )
                 )
                 
                 # Clean up thumbnail
